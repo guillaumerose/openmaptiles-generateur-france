@@ -53,10 +53,19 @@ generate_background 8
 
 zoom=14
 generate guadeloupe $zoom
-generate guyane $zoom
 generate martinique $zoom
-generate mayotte $zoom
+generate guyane $zoom
 generate reunion $zoom
+# Saint-Pierre-et-Miquelon
+generate mayotte $zoom
+# Saint-Barthélemy
+# Saint-Martin
+generate wallis-et-futuna $zoom
+generate polynesie-francaise $zoom
+generate new-caledonia $zoom
+# Terres australes et antarctiques françaises
+generate ile-de-clipperton $zoom
+
 generate france $zoom
 
 if [ ! -d tippecanoe ]
