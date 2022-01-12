@@ -12,23 +12,24 @@ mkdir -p out/
 function generate_background() {
     local zoom=$1
 
+    if [ -f ./out/planet.mbtiles ]
+    then
+        return
+    fi
+
     cd openmaptiles
     sed -i "s/MAX_ZOOM=.*/MAX_ZOOM=$zoom/" .env
+    # Add an extra 0 at the end of the default bbox to avoid the computation of the area bbox and create the whole planet.
+    sed -i "s/BBOX=.*/BBOX=-180.0,-85.0511,180.0,85.05110/" .env
 
-    make refresh-docker-images
+    rm -f data/*.osm.pbf data/*.bbox
     make destroy-db
     make clean
-    make all
-    make start-db-preloaded
+
+    # A small area is needed to bootstrap the db
     make download area=guadeloupe
     rm data/guadeloupe.bbox
-    make import-osm area=guadeloupe
-    make import-wikidata
-    make import-sql
-    make analyze-db
-    make test-perf-null
-    make generate-tiles-pg
-    make stop-db
+    ./quickstart.sh guadeloupe
 
     mv data/tiles.mbtiles ../out/planet.mbtiles
     cd -
@@ -38,35 +39,39 @@ function generate() {
     local area=$1
     local zoom=$2
 
+    if [ -f "./out/$area-$zoom.mbtiles" ]
+    then
+        return
+    fi
+
     cd openmaptiles
     sed -i "s/MAX_ZOOM=.*/MAX_ZOOM=$zoom/" .env
+    sed -i "s/BBOX=.*/BBOX=-180.0,-85.0511,180.0,85.0511/" .env
 
+    rm -f data/*.osm.pbf data/*.bbox
     make destroy-db
     make clean
-    NO_REFRESH=1 ./quickstart.sh $area
 
-    mv data/tiles.mbtiles ../out/$area-$zoom.mbtiles
+    NO_REFRESH=1 ./quickstart.sh "$area"
+
+    mv data/tiles.mbtiles "../out/$area-$zoom.mbtiles"
     cd -
 }
 
 generate_background 8
 
 zoom=14
-generate guadeloupe $zoom
-generate martinique $zoom
-generate guyane $zoom
-generate reunion $zoom
-# Saint-Pierre-et-Miquelon
-generate mayotte $zoom
-# Saint-Barthélemy
-# Saint-Martin
-generate wallis-et-futuna $zoom
-generate polynesie-francaise $zoom
-generate new-caledonia $zoom
-# Terres australes et antarctiques françaises
-generate ile-de-clipperton $zoom
 
-generate france $zoom
+areas="guadeloupe martinique guyane reunion mayotte wallis-et-futuna polynesie-francaise new-caledonia ile-de-clipperton france"
+for area in $areas; do
+    generate $area $zoom
+done
+
+# Manquants:
+# Saint-Pierre-et-Miquelon -56.566541,46.715062,-56.063916,47.165121
+# Saint-Barthélemy -63.165204,17.84369,-62.732617,18.144098
+# Saint-Martin 
+# Terres australes et antarctiques françaises
 
 if [ ! -d tippecanoe ]
 then
@@ -75,10 +80,16 @@ fi
 
 (cd tippecanoe && docker build -t tippecanoe:latest .)
 
+mbtiles=""
+for area in $areas; do
+    mbtiles+="/data/$area-$zoom.mbtiles "
+done
+
+rm -f out/france-vector.mbtiles
 docker run -it --rm -u $(id -u ${USER}):$(id -g ${USER}) \
   -v $(pwd)/out:/data \
   tippecanoe:latest \
-  tile-join --no-tile-size-limit -o /data/france-vector.mbtiles /data/planet.mbtiles /data/guadeloupe-14.mbtiles /data/guyane-14.mbtiles /data/martinique-14.mbtiles /data/mayotte-14.mbtiles /data/reunion-14.mbtiles /data/france-14.mbtiles
+  /bin/sh -c "tile-join --no-tile-size-limit -o /data/france-vector.mbtiles /data/planet.mbtiles $mbtiles"
 
 function meta-set() {
     docker run -it --rm -u $(id -u ${USER}):$(id -g ${USER}) \
