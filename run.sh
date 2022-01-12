@@ -58,20 +58,70 @@ function generate() {
     cd -
 }
 
+# generate the full planet
 generate_background 8
 
+# generate France using geofabrik
 zoom=14
-
 areas="guadeloupe martinique guyane reunion mayotte wallis-et-futuna polynesie-francaise new-caledonia ile-de-clipperton france"
 for area in $areas; do
     generate $area $zoom
 done
 
-# Manquants:
-# Saint-Pierre-et-Miquelon -56.566541,46.715062,-56.063916,47.165121
-# Saint-Barthélemy -63.165204,17.84369,-62.732617,18.144098
-# Saint-Martin 
-# Terres australes et antarctiques françaises
+# generate parts of France that are not directly in geofabrik
+
+mkdir -p osmium/
+docker build -t osmium:latest .
+cd osmium
+
+if [ ! -f st-pierre.osm.pbf ]
+then
+    if [ ! -f canada-latest.osm.pbf ]
+    then
+        wget https://download.geofabrik.de/north-america/canada-latest.osm.pbf
+    fi
+    docker run -v $(pwd):/data --rm -u $(id -u ${USER}):$(id -g ${USER}) osmium extract --overwrite --bbox -56.566541,46.715062,-56.063916,47.165121 -o st-pierre.osm.pbf canada-latest.osm.pbf
+fi
+
+if [ ! -f st-martin.osm.pbf ]
+then
+    if [ ! -f central-america-latest.osm.pbf ]
+    then
+        wget https://download.geofabrik.de/central-america-latest.osm.pbf
+    fi
+    docker run -v $(pwd):/data --rm -u $(id -u ${USER}):$(id -g ${USER}) osmium extract --overwrite --bbox -63.165204,17.84369,-62.732617,18.144098 -o st-martin.osm.pbf central-america-latest.osm.pbf
+fi
+
+cd -
+
+function generate_custom() {
+    local area=$1
+    local zoom=$2
+
+    if [ -f "./out/$area-$zoom.mbtiles" ]
+    then
+        return
+    fi
+
+    cd openmaptiles
+    sed -i "s/MAX_ZOOM=.*/MAX_ZOOM=$zoom/" .env
+    sed -i "s/BBOX=.*/BBOX=-180.0,-85.0511,180.0,85.0511/" .env
+
+    rm -f data/*.osm.pbf data/*.bbox
+    make destroy-db
+    make clean
+
+    cp ../osmium/$area.osm.pbf data/
+    NO_REFRESH=1 ./quickstart.sh "$area"
+
+    mv data/tiles.mbtiles "../out/$area-$zoom.mbtiles"
+    cd -
+}
+
+generate_custom st-pierre $zoom
+generate_custom st-martin $zoom
+
+# merge all parts
 
 if [ ! -d tippecanoe ]
 then
@@ -80,7 +130,7 @@ fi
 
 (cd tippecanoe && docker build -t tippecanoe:latest .)
 
-mbtiles=""
+mbtiles="/data/st-pierre-$zoom.mbtiles /data/st-martin-$zoom.mbtiles "
 for area in $areas; do
     mbtiles+="/data/$area-$zoom.mbtiles "
 done
@@ -90,6 +140,8 @@ docker run -it --rm -u $(id -u ${USER}):$(id -g ${USER}) \
   -v $(pwd)/out:/data \
   tippecanoe:latest \
   /bin/sh -c "tile-join --no-tile-size-limit -o /data/france-vector.mbtiles /data/planet.mbtiles $mbtiles"
+
+# add the correct metadata
 
 function meta-set() {
     docker run -it --rm -u $(id -u ${USER}):$(id -g ${USER}) \
