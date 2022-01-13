@@ -65,7 +65,7 @@ generate_background 8
 zoom=14
 areas="guadeloupe martinique guyane reunion mayotte wallis-et-futuna polynesie-francaise new-caledonia ile-de-clipperton france"
 for area in $areas; do
-    generate $area $zoom
+    generate "$area" "$zoom"
 done
 
 # generate parts of France that are not directly in geofabrik
@@ -80,7 +80,7 @@ then
     then
         wget https://download.geofabrik.de/north-america/canada-latest.osm.pbf
     fi
-    docker run -v $(pwd):/data --rm -u $(id -u ${USER}):$(id -g ${USER}) osmium extract --overwrite --bbox -56.566541,46.715062,-56.063916,47.165121 -o st-pierre.osm.pbf canada-latest.osm.pbf
+    docker run -v "$(pwd):/data" --rm -u "$(id -u "${USER}"):$(id -g "${USER}")" osmium extract --overwrite --bbox -56.566541,46.715062,-56.063916,47.165121 -o st-pierre.osm.pbf canada-latest.osm.pbf
 fi
 
 if [ ! -f st-martin.osm.pbf ]
@@ -89,7 +89,7 @@ then
     then
         wget https://download.geofabrik.de/central-america-latest.osm.pbf
     fi
-    docker run -v $(pwd):/data --rm -u $(id -u ${USER}):$(id -g ${USER}) osmium extract --overwrite --bbox -63.165204,17.84369,-62.732617,18.144098 -o st-martin.osm.pbf central-america-latest.osm.pbf
+    docker run -v "$(pwd):/data" --rm -u "$(id -u "${USER}"):$(id -g "${USER}")" osmium extract --overwrite --bbox -63.165204,17.84369,-62.732617,18.144098 -o st-martin.osm.pbf central-america-latest.osm.pbf
 fi
 
 cd -
@@ -111,15 +111,15 @@ function generate_custom() {
     make destroy-db
     make clean
 
-    cp ../osmium/$area.osm.pbf data/
+    cp "../osmium/$area.osm.pbf" data/
     NO_REFRESH=1 ./quickstart.sh "$area"
 
     mv data/tiles.mbtiles "../out/$area-$zoom.mbtiles"
     cd -
 }
 
-generate_custom st-pierre $zoom
-generate_custom st-martin $zoom
+generate_custom st-pierre "$zoom"
+generate_custom st-martin "$zoom"
 
 # merge all parts
 
@@ -136,21 +136,21 @@ for area in $areas; do
 done
 
 rm -f out/france-vector.mbtiles
-docker run -it --rm -u $(id -u ${USER}):$(id -g ${USER}) \
-  -v $(pwd)/out:/data \
+docker run -it --rm -u "$(id -u "${USER}"):$(id -g "${USER}")" \
+  -v "$(pwd)/out:/data" \
   tippecanoe:latest \
   /bin/sh -c "tile-join --no-tile-size-limit -o /data/france-vector.mbtiles /data/planet.mbtiles $mbtiles"
 
 # add the correct metadata
 
 function meta-set() {
-    docker run -it --rm -u $(id -u ${USER}):$(id -g ${USER}) \
+    docker run -it --rm -u "$(id -u "${USER}"):$(id -g "${USER}")" \
         -v "${PWD}/out:/tileset" \
         openmaptiles/openmaptiles-tools mbtiles-tools meta-set france-vector.mbtiles "$1" "$2"
 }
 
 function meta-erase() {
-    docker run -it --rm -u $(id -u ${USER}):$(id -g ${USER}) \
+    docker run -it --rm -u "$(id -u "${USER}"):$(id -g "${USER}")" \
         -v "${PWD}/out:/tileset" \
         openmaptiles/openmaptiles-tools mbtiles-tools meta-set france-vector.mbtiles "$1"
 }
