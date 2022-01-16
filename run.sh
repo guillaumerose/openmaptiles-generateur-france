@@ -136,7 +136,7 @@ for area in $areas; do
 done
 
 rm -f out/france-vector.mbtiles
-docker run -it --rm -u "$(id -u "${USER}"):$(id -g "${USER}")" \
+docker run -t --rm -u "$(id -u "${USER}"):$(id -g "${USER}")" \
   -v "$(pwd)/out:/data" \
   tippecanoe:latest \
   /bin/sh -c "tile-join --no-tile-size-limit -o /data/france-vector.mbtiles /data/planet.mbtiles $mbtiles"
@@ -144,13 +144,13 @@ docker run -it --rm -u "$(id -u "${USER}"):$(id -g "${USER}")" \
 # add the correct metadata
 
 function meta-set() {
-    docker run -it --rm -u "$(id -u "${USER}"):$(id -g "${USER}")" \
+    docker run -t --rm -u "$(id -u "${USER}"):$(id -g "${USER}")" \
         -v "${PWD}/out:/tileset" \
         openmaptiles/openmaptiles-tools mbtiles-tools meta-set france-vector.mbtiles "$1" "$2"
 }
 
 function meta-erase() {
-    docker run -it --rm -u "$(id -u "${USER}"):$(id -g "${USER}")" \
+    docker run -t --rm -u "$(id -u "${USER}"):$(id -g "${USER}")" \
         -v "${PWD}/out:/tileset" \
         openmaptiles/openmaptiles-tools mbtiles-tools meta-set france-vector.mbtiles "$1"
 }
