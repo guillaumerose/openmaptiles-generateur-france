@@ -74,23 +74,34 @@ mkdir -p osmium/
 docker build -t osmium:latest .
 cd osmium
 
-if [ ! -f st-pierre.osm.pbf ]
-then
-    if [ ! -f canada-latest.osm.pbf ]
-    then
-        wget https://download.geofabrik.de/north-america/canada-latest.osm.pbf
-    fi
-    docker run -v "$(pwd):/data" --rm -u "$(id -u "${USER}"):$(id -g "${USER}")" osmium extract --overwrite --bbox -56.566541,46.715062,-56.063916,47.165121 -o st-pierre.osm.pbf canada-latest.osm.pbf
-fi
+function extract() {
+    local area=$1
+    local link=$2
+    local bbox=$3
+    local target=$4
 
-if [ ! -f st-martin.osm.pbf ]
-then
-    if [ ! -f central-america-latest.osm.pbf ]
+
+    if [ ! -f "$target.osm.pbf" ]
     then
-        wget https://download.geofabrik.de/central-america-latest.osm.pbf
+        if [ ! -f "$area-latest.osm.pbf" ]
+        then
+            wget -O "$area-latest.osm.pbf" "$link"
+        fi
+        docker run -v "$(pwd):/data" --rm -u "$(id -u "${USER}"):$(id -g "${USER}")" osmium extract --overwrite --bbox "$bbox" -o "$target.osm.pbf" "$area-latest.osm.pbf"
     fi
-    docker run -v "$(pwd):/data" --rm -u "$(id -u "${USER}"):$(id -g "${USER}")" osmium extract --overwrite --bbox -63.165204,17.84369,-62.732617,18.144098 -o st-martin.osm.pbf central-america-latest.osm.pbf
-fi
+}
+
+extract "central-america" "https://download.geofabrik.de/central-america-latest.osm.pbf" "-63.165204,17.84369,-62.732617,18.144098" "st-martin"
+extract "canada" "https://download.geofabrik.de/north-america/canada-latest.osm.pbf" "-56.566541,46.715062,-56.063916,47.165121" "st-pierre"
+
+extract "africa" "https://download.geofabrik.de/africa-latest.osm.pbf" "39.3807,-22.666,40.6441,-21.2087" "taaf1"
+extract "africa" "https://download.geofabrik.de/africa-latest.osm.pbf" "42.65289,-17.095511,42.778546,-17.006232" "taaf2"
+extract "africa" "https://download.geofabrik.de/africa-latest.osm.pbf" "47.261827,-11.610539,47.413404,-11.493147" "taaf3"
+extract "africa" "https://download.geofabrik.de/africa-latest.osm.pbf" "54.503534,-15.909334,54.543016,-15.871691" "taaf4"
+
+extract "oceania" "https://download.geofabrik.de/australia-oceania-latest.osm.pbf" "67.6849,-50.2001,71.0138,-48.2671" "taaf5"
+extract "oceania" "https://download.geofabrik.de/australia-oceania-latest.osm.pbf" "50.0738,-46.6121,52.4606,-45.9076" "taaf6"
+extract "oceania" "https://download.geofabrik.de/australia-oceania-latest.osm.pbf" "77.3227,-38.8412,77.8006,-37.6918" "taaf7"
 
 cd -
 
@@ -120,6 +131,9 @@ function generate_custom() {
 
 generate_custom st-pierre "$zoom"
 generate_custom st-martin "$zoom"
+for i in {1..7}; do
+    generate_custom "taaf$i" "$zoom"
+done
 
 # merge all parts
 
@@ -131,6 +145,9 @@ fi
 (cd tippecanoe && docker build -t tippecanoe:latest .)
 
 mbtiles="/data/st-pierre-$zoom.mbtiles /data/st-martin-$zoom.mbtiles "
+for i in {1..7}; do
+    mbtiles+="/data/taaf$i-$zoom.mbtiles "
+done
 for area in $areas; do
     mbtiles+="/data/$area-$zoom.mbtiles "
 done
