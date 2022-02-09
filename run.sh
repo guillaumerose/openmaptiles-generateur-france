@@ -176,6 +176,7 @@ meta-set name "Tuiles vectorielles France par Etalab"
 meta-set description "Tuiles vectorielles d’usage général pour la France et ses territoires d’outremer"
 meta-set attribution "<a href=\"https://www.etalab.gouv.fr/\" target=\"_blank\">&copy; Etalab</a> <a href=\"https://www.openmaptiles.org/\" target=\"_blank\">&copy; OpenMapTiles</a> <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\">&copy; Contributeurs OpenStreetMap</a>"
 meta-set center 2.308097,48.850132,14
+meta-set created "$(date --iso-8601=seconds)"
 meta-erase generator_options
 meta-erase generator
 
