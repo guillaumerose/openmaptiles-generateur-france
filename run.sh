@@ -21,6 +21,7 @@ function generate_background() {
     sed -i "s/MAX_ZOOM=.*/MAX_ZOOM=$zoom/" .env
     # Add an extra 0 at the end of the default bbox to avoid the computation of the area bbox and create the whole planet.
     sed -i "s/BBOX=.*/BBOX=-180.0,-85.0511,180.0,85.05110/" .env
+    sed -i "s/MBTILES_FILE=.*/MBTILES_FILE=intermediate.mbtiles/" .env
 
     rm -f data/*.osm.pbf data/*.bbox
     make destroy-db
@@ -31,7 +32,7 @@ function generate_background() {
     rm data/guadeloupe.bbox
     ./quickstart.sh guadeloupe
 
-    mv data/tiles.mbtiles ../out/planet.mbtiles
+    mv data/intermediate.mbtiles ../out/planet.mbtiles
     cd -
 }
 
@@ -47,6 +48,7 @@ function generate() {
     cd openmaptiles
     sed -i "s/MAX_ZOOM=.*/MAX_ZOOM=$zoom/" .env
     sed -i "s/BBOX=.*/BBOX=-180.0,-85.0511,180.0,85.0511/" .env
+    sed -i "s/MBTILES_FILE=.*/MBTILES_FILE=intermediate.mbtiles/" .env
 
     rm -f data/*.osm.pbf data/*.bbox
     make destroy-db
@@ -54,7 +56,7 @@ function generate() {
 
     NO_REFRESH=1 ./quickstart.sh "$area"
 
-    mv data/tiles.mbtiles "../out/$area-$zoom.mbtiles"
+    mv data/intermediate.mbtiles "../out/$area-$zoom.mbtiles"
     cd -
 }
 
@@ -117,6 +119,7 @@ function generate_custom() {
     cd openmaptiles
     sed -i "s/MAX_ZOOM=.*/MAX_ZOOM=$zoom/" .env
     sed -i "s/BBOX=.*/BBOX=-180.0,-85.0511,180.0,85.0511/" .env
+    sed -i "s/MBTILES_FILE=.*/MBTILES_FILE=intermediate.mbtiles/" .env
 
     rm -f data/*.osm.pbf data/*.bbox
     make destroy-db
@@ -125,7 +128,7 @@ function generate_custom() {
     cp "../osmium/$area.osm.pbf" data/
     NO_REFRESH=1 ./quickstart.sh "$area"
 
-    mv data/tiles.mbtiles "../out/$area-$zoom.mbtiles"
+    mv data/intermediate.mbtiles "../out/$area-$zoom.mbtiles"
     cd -
 }
 
